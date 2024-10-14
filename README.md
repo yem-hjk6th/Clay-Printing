@@ -342,3 +342,211 @@
                 - As the idea is to identify the most frequent timing records, we should focus on the timings that appear more consistently across the pressure and motor settings.
             - #### Null/No Extrusion
                 - For conditions where null was recorded, the extrusion did not happen, telling those pressure setting did not force material flow without motor on
+
+10. **Printing test on AUT mode**
+    - #### Based on trial 4: 31%, red loam
+    - Trial 5: 
+        - ### 31% water in loam (2024/10/09)
+            - *Quantity of loam: 1200g*
+                - *Add soil loam every 100g, measured every 100g*
+            - *Water added: 539.13g = 539.13ml*
+                - *Add water in ml measurement*
+            - *Actual Quantity of loam/water mixture loaded in tank: 1.6kg*
+            - **Mass loss analysis**
+                - *Loss during mixing*
+                    - Blank blender container: 0.65kg
+                    - Put in the loam and water: 2.35kg
+                    - Container after mixing: 0.7kg
+                - *Loss during loading in WASP tank*
+                    - Blank WASP tank with all elements: 3.8kg
+                    - Put in mixed material: 5.4kg
+                - Loss division:
+                    - remains on water and loam container: ~50g
+                    - residues of blender container: ~50g
+                    - *Based on previous test, the left part of tank is very hard to extrude: ~50g*
+            - Note: 
+                - **Reserve at least 13% mass loss in material preparation**
+            
+        - Objectives:
+            - *Test on the matching situation of extruding speed and robotic movement speed*
+            - *Print out the sample*
+
+        - Process: 
+            - ##### Phase 1: Extruding test matching the mapped speed of param test
+            - ##### Phase 2: Match the extruding and LIN movement speed
+            - ##### Phase 3: Printing
+
+        - Observation: 
+        - #### Phase 1: Match extruding speed
+            1. Pressure: 5 bar, motor off
+                - material flowing inside tubing
+            2. Pressure: 5.5 bar (90 psi), motor off
+                - Firstly, the material smoothly came out of the extruder nozzle around 60 mm segment
+                - Then stuck
+                - Suggest: Increase the pressure
+            3. Pressure: 6.5 bar (93 psi), motor CCW 400
+                - Firstly, segments were extruded as 6mm diameter
+                - Then, segments were extruded as 8mm diameter
+                - segments were steadily extruded as 10mm diameter
+                - Tested extruding speed: 10 mm/s
+                    - Measurement: seconds for every 20 mm
+                    - 2.19, 2.01, 2.39, 1.74, 1.98, 1.83
+            - Note:
+                - ID of nozzle: TBD
+            4. Pressure: 5 bar (75 psi), motor CCW 400
+                - Tested extruding speed: 6 mm/s
+            5. Pressure: 5 bar (70 psi), motor CCW 300
+                - Test the matching situation of extruding and robotic LIN movement speed
+
+        - #### Phase 2: Match extruding speed with Robot's LIN move
+            - **src file reader**
+            ```krl
+            ;FOLD STARTPOSITION - BASE IS 0, TOOL IS 9, SPEED IS 10%, POSITION IS A1 24.88,A2 -28.75,A3 79.83,A4 32.04,A5 -55.67,A6 -21.44,E1 0,E2 0,E3 0,E4 0
+            ```
+            ```krl
+            ;FOLD LIN SPEED IS 0.05 m/sec, INTERPOLATION SETTINGS IN FOLD
+            $VEL.CP=0.05
+            $APO.CDIS=20
+            $APO.CPTP=100
+            $APO.CVEL=50
+            $ADVANCE=5
+            ```
+            ```krl
+            PTP {X 620.675, Y -12.7, Z 629.281, A 0, B 90, C -0, E1 0, E2 0, E3 0, E4 0, S 'B110'} C_PTP
+            $VEL.CP=0.1
+            LIN {X 620.675, Y -12.7, Z 629.281, A 0, B 90, C -0, E1 0, E2 0, E3 0, E4 0} 
+            WAIT SEC .1
+            ;FOLD Command From Robot :
+            $OUT[17] = True
+            ;ENDFOLD
+            LIN {X 620.675, Y -12.7, Z 629.281, A 0, B 90, C -0, E1 0, E2 0, E3 0, E4 0} 
+            LIN {X 620.675, Y -12.7, Z 599.281, A 0, B 90, C -0, E1 0, E2 0, E3 0, E4 0} C_VEL
+            $VEL.CP=0.02
+            ```
+            - Initial speed:    0.05 m/s  =  50  mm/s
+            - Then:             0.1 m/s   =  100 mm/s
+            - Main:             0.02 m/s  =  20  mm/s
+        #### Measurement in reality of main LIN move: 
+        - **33 mm/s** for 0.02 m/s VEL setting of robots
+        - **16.5 mm/s** for 0.01 m/s VEL setting of robots
+
+        | Pressure (bar / psi) | Motor (off / CCW r/s) | Extruding speed (seconds for 10 mm) | Avg Speed (mm/s) | Set velocity of KUKA (mm/s) | Actual measured velocity (mm/s) | Play Speed Percentage (%) | Set velocity of KUKA (mm/s) | Actual measured velocity (mm/s) | Play Speed Percentage (%) |
+        |----------------------|-----------------------|-------------------------------------|------------------|-----------------------------|----------------------------------|----------------------------|------------------------------------|----------------------------------------|------------------------------------|
+        | 6 / 90               | off                   | 12, 10, 8                           | 1.1              | 20                          | 33                               | 3                          | 10                                 | 16.5                                    | 1.5                                |
+        | 6 / 90               | 200                   | 1.2, 1.3, 1.1                       | 12               | 20                          | 33                               | 36                         | 10                                 | 16.5                                    | 18.0                               |
+        | 6 / 90               | 300                   | 0.5, 0.55, 0.6                      | 20               | 20                          | 33                               | 60                         | 10                                 | 16.5                                    | 30.0                               |
+        | 6 / 90               | 400                   | 0.4, 0.45, 0.5                      | 22.2             | 20                          | 33                               | 67                         | 10                                 | 16.5                                    | 33.5                               |
+        | 5.5 / 80             | off                   | 6, 5, 7                             | 1.7              | 20                          | 33                               | 5                          | 10                                 | 16.5                                    | 2.5                                |
+        | 5.5 / 80             | 200                   | 2, 1.5, 1.7                         | 5.8              | 20                          | 33                               | 17                         | 10                                 | 16.5                                    | 8.5                                |
+        | 5.5 / 80             | 300                   | 1, 1.5, 1.3                         | 8.1              | 20                          | 33                               | 24                         | 10                                 | 16.5                                    | 12.0                               |
+        | 5.5 / 80             | 400                   | 0.85, 0.75, 0.5                     | 15               | 20                          | 33                               | 45                         | 10                                 | 16.5                                    | 22.5                               |
+        | 5 / 75               | off                   | null                                | null             | null                        | 33                               | null                       | 10                                 | 16.5                                    | null                               |
+        | 5 / 75               | 200                   | 2.5, 2, 1.85                        | 4.8              | 20                          | 33                               | 14                         | 10                                 | 16.5                                    | 7.0                                |
+        | 5 / 75               | 300                   | 1.3, 1.1, 1.4                       | 8                | 20                          | 33                               | 24                         | 10                                 | 16.5                                    | 12.0                               |
+        | 5 / 75               | 400                   | 1.3, 0.8, 1.1                       | 9.8              | 20                          | 33                               | 29                         | 10                                 | 16.5                                    | 14.5                               |
+        | 4.5 / 65             | off                   | null                                | null             | null                        | 33                               | null                       | 10                                 | 16.5                                    | null                               |
+        | 4.5 / 65             | 200                   | 2.5, 2, 3                           | 4.1              | 20                          | 33                               | 12                         | 10                                 | 16.5                                    | 6.0                                |
+        | 4 / 60               | 300                   | 2, 1.5, 2.5                         | 5.2              | 20                          | 33                               | 15                         | 10                                 | 16.5                                    | 7.5                                |
+        | 4 / 60               | 200                   | 2.5, 2.15, 2                        | 4.6              | 20                          | 33                               | 13                         | 10                                 | 16.5                                    | 6.5                                |
+        | 4 / 60               | 300                   | 2.4, 2.1, 2.2                       | 4.5              | 20                          | 33                               | 13                         | 10                                 | 16.5                                    | 6.5                                |
+        | 3.5 / 50             | off                   | null                                | null             | null                        | 33                               | null                       | 10                                 | 16.5                                    | null                               |
+        | 3.5 / 50             | 200                   | 3.7, 3.4, 3.6                       | 2.8              | 20                          | 33                               | 8                          | 10                                 | 16.5                                    | 4.0                                |
+        | 3.5 / 50             | 300                   | 2.4, 2.6, 2.3                       | 4.1              | 20                          | 33                               | 12                         | 10                                 | 16.5                                    | 6.0                                |
+
+
+        - #### Phase 3: Printing on AUT mode
+
+            <div style="text-align: center;">
+            <video width="300" controls>
+                <source src="./md_pic/AUT_t1.mp4" type="video/mp4">
+            </video>
+            </div>
+
+        - Initial working condition:
+            - Extruder setting:
+                - Pressure: 6 bar (90 psi)
+                - Motor: 300 CCW
+            - Robots setting:
+                - Velocity: 0.01 m/s = 10 mm/s
+                - Acceleration: 10
+                - Actual LIN movement speed: 16.5 mm/s
+                - Playspeed: 64%
+            - SRC file setting:
+                - Layer height: 3 mm
+                - Lifted height over table: 12 mm
+                - Actual lifted height: 10 mm
+                - Actual Layer height: TBD
+
+        - Change motor speed:
+            - CCW 300:
+                - holds ~20s
+            - CCW 350:
+                - holds ~5s
+            - CCW 200:
+                - holds ~10s
+            - Then repeatedly plug-off and plug-in
+            - Or change switch configuration back and forth: OFF OFF OFF to ON ON ON, and repeat
+
+        - Output:
+
+            <p align="center">
+            <img src="./md_pic/T5_1.png" alt="F1" width="250"/>
+            <img src="./md_pic/T5_3.png" alt="F2" width="233"/>
+            <img src="./md_pic/T5_4.png" alt="F3" width="206"/>
+            <img src="./md_pic/T5_2.png" alt="F3" width="698"/>
+            </p>
+
+            - Size: 160 x 160 x 60 mm
+            - Volume estimation:
+                - Line length: 160 mm x 4 x 15(layer) x 110% = 10560 mm = 105.6 dm
+                - Cross section: (10 mm / 2)^2 x π = 78.539816 mm^2 = 78.539816 x 10^-4 dm^2
+                - Estimated volume: 78.539816 x 10^-4 dm^2 x 105.6 dm = 0.82938046 dm^3
+                    - 0.829 L
+                - Estimated mass: 1.6 kg * 2/3 = 1.06 kg
+                - Estimated density: 1.3 g/cm^3 (1.8 -2 g/cm^3 as loam estimation)
+
+            - The crack from bottom to up: due to the wooden base, the position shift happened after the printed clay dried
+            - The relative huge ball shape: the motor stopped at the same place several times but the robot did not stop
+            - The over-flatten layer: the robots stopped but the motor did not stop
+            - The flake texture: the motor shoveled up the materials
+
+        - Problems during printing
+            1. when reducing the pressure from 5 bar to 4.5 bar, the **leakage** happened in the connection between tubing and inlet hole of extruder; the leakage problem was fixed and the pressure was tuned to 6 bar
+            2. The robotic arms stopped and reported: check of robot load (Tool 9) calculated overload.
+                - The mass of tool 9: WASP was modified to 0.1 kg BUT still reported that
+            3. The extruder motor stuck much often than the robots, need the swtich on and off via switch configuration
+            4. Layer height setting is too low so that the extruder shoveled up the printed layer
+                - printing from 2 - 3 layers higher than the oringinal layer would not meet this situation
+            5. Although trying to spin up the reader of air pressure during the stucking of motor, the motor would not go smoothly either and the pressure reader did not go above 7 bar, cuz the WASP tank got the relief valve to naturally leak the over-pressure than 7 bar
+            6. The metal connector was bent during dry run, the XYZ-reference tool coordinate needed realigning.
+            7. The tubing still existed the air gap during feeding material, which meant the material may need compacting
+
+        - TO DO: 2 main stop during printing
+            1. robot's load check:
+                - Change the placement of model in Rhino
+                - Ref the initial axial status of robots
+                - Ref the load of tool setting of smartPAD
+            - Note:
+                - Ehsan: check the tool calibration and uncheck the box of load checking
+            2. control box's motor check:
+                - Set the larger layer height
+                - Alter the other power supply
+                - The current material was too coarse, needing the finer filter
+                - The connection of motor and control box was weak, needing soldering the cable
+            3. Print with full tank
+            4. Get the new mapped printing/extruding speed param
+
+11. **Specification**
+    - #### Extruder Motor: 17HS24-2104S
+        - Max voltage: 25V
+    - #### Extruder Fan: EE40201S2-1000U-999
+        - DC 12V, 0.76W
+    - #### Power supply:
+        - old: 12V, 5A
+        - new: 24V, 15A
+    - #### Anchor plate:
+        - old: 2mm stainless steel plate
+        - new: TBD
+    - #### Screw (for new):
+        - M5 hex (TBD) for fixing in flange
+        - M3 hex (25 mm) for fixing the motor
